@@ -1,0 +1,22 @@
+﻿Lake name,Abbreviation,Treatment - stickleback phenotype,Region,Latitude,Longitude,Elevation (m),Surface (ha),Mean depth (m),Max depth (m),Volume (m3),temperature C at 0.5 m,O2 (mg/L) at  0.5 m,% water column at < or = 50% DO,Conductivity (uS/cm) at 0.5 m,pH at 0.5 m,Secchi depth (m),TP ug/L,TN mg/L,DOC mg/L,chla ug/L,Ca mg/L,macroinverts 4 stn pooled (Nathan),zooplankton 1 central stn (Simon et Stéph)
+Hope Lake,HL,Limnetic recipient,Tote Rd - Kenai,60.4212383,-151.1872501,,10.89,,8.8392,507824,15.4,9.6,29%,67,7.81,4.5,6.2,0.3,4.7,0.7,7.3,yes,yes
+Ranchero Lake,RL,Limnetic recipient,Tote Rd - Kenai,60.4231092,-151.1837927,,3.12,,3.048,51288,16.4,8.45,0%,56.1,7.59,2.4,13.4,0.4,5.5,2.8,5.9,yes,yes
+Crystal Lake,CL,Limnetic recipient,Tote Rd - Kenai,60.4243309,-151.1908646,,6.76,,9.7536,341057,15.1,8.79,32%,60.2,7.66,5.5,5.6,0.3,13.4,0.6,6,yes,yes
+Fred's Lake,FL,Limnetic recipient,Tote Rd - Kenai,60.4242669,-151.1980601,,2.47,,1.2192,18749,15.1,8.93,0%,51.4,8.15,1,7.4,0.4,7.5,0.5,4.8,yes,yes
+G Lake,GL,Benthic recipient,Tote Rd - Kenai,,,,7,,9.4488,348335,14.4,14.08,0%,10.7,7,6.5,4.8,0.2,4.5,0.4,0.6,yes,yes
+CC Lake,CC,Benthic recipient,Tote Rd - Kenai,,,,1.82,,3.048,32811,16.4,9.15,20%,44.3,7.4,2.5,8.3,0.3,9.6,0.9,3.9,yes,yes
+Leisure Lake,LL,Benthic recipient,Tote Rd - Kenai,60.4152147,-151.2104102,,4.49,,7.0104,151903,16.1,9.58,57%,40.4,7.44,3.1,8,0.3,12.7,0.8,4.4,yes,yes
+Leisure Pond,LP,Benthic recipient,Tote Rd - Kenai,,,,0.61,,3.1,13568,16.3,8.34,33%,48.5,7.18,2,12.1,0.3,9.1,-1,5.5,yes,yes
+Warfle Lake,WL,recipient - anadromous,Kenai,,,,3.4,,4.2672,67718,14.7,9.24,2.50%,15.3,7.27,3.4,6.6,0.4,8.7,0.9,1.1,yes,NO - still to count
+Loon Lake,LO,recipient - mix benthic + limnetic,Kenai,,,,8.5,,6.7056,230661,16.7,9.36,0%,16.7,7.18,3.6,6,0.4,10,0.3,1.3,yes,NO - still to count
+Spirit,SL,limnetic source,Kenai,60.593038,-150.986174,,,,21,,14.5,11.71,0%,59.2,8.2,8.5,4.3,0.2,8.1,0.5,9.2,yes,yes
+Wik,WK,limnetic source,Kenai,60.72,-151.25,57,79.7,6.2,24.4,4983267,14.9,9.54,0%,14.3,7.88,10,0.2,0.2,7.4,0.3,1.3,yes,yes
+Long,LG,limnetic source,Matsu,61.578,-149.764,,,,7.9,,18.8,9.34,2%,75.5,8.27,bottom (5.1),6,0.3,4.8,0.7,13.3,yes,NO - still to count
+South Rolley,SR,limnetic source,Matsu,61.667,-150.138,,,,19.2,,17.8,9.72,1.30%,31.6,7.75,4,3.3,0.2,7.7,0.5,5.6,yes,yes
+Watson,WT,benthic source ,Kenai,60.539,-150.467,,23.47,,4.27,,15.7,8.83,2.80%,92.7,8.01,2.8,16.3,0.3,5.2,0.6,19.2,yes,yes
+Tern,TL,benthic source ,Kenai,60.533,-149.55,,30.35,,3.3,,13.9,11.07,0%,133.2,8.45,2.9,8.5,0.6,7.6,-12.7,29.7,yes,yes
+Finger,FG or FN,benthic source ,Matsu,61.6056,-149.2792,,,,13.4,,17.1,9.93,16.70%,236.5,8.52,2.5,25.2,0.5,,3.7,,yes,NO - still to count
+Walby,WB,benthic source ,Matsu,61.62,-149.213,,,,5.48,,18.5,9.95,0%,164.9,8.87,4,9,0.4,5.8,1.7,27.3,yes,NO - still to count
+Jean,JL,benthic source (backup),Kenai,60.506,-150.171,120,50,11.6,21.3,5300000,12.9,11.96,0%,148.6,8.56,2.6,8.4,0.5,1.6,2.4,36.9,yes,yes
+Corcoran,CO,((survey lake)),Matsu,,,,,,,,22.9,14.07,0%,212.4,8.8,bottom (1),14.5,0.3,5.8,2.7,35.3,no,yes
+Milo,ML,(survey lake)),Matsu,,,,,,,,17.7,10.44,7.70%,16.5,7.85,3.75,6.4,0.3,7.3,1.1,2.5,no,no
