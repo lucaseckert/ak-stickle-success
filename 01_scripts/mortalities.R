@@ -1,22 +1,14 @@
-#### Mortality Analysis ####
+#### MORTALITY ANALYSIS ####
 
 ## Description: exploring patterns in pre-transplant mortalities
 ## Author: Lucas Eckert (lucas.eckert@mail.mcgill.ca)
 
-## packages 
-library(tidyverse)
+## constants
+source(here::here("02_tidy-data/constants.R"))
 
 ## data
 ancestry_data<-read.csv("./02_tidy-data/final-ancestry.csv")
 data19<-filter(ancestry_data,year=="19")
-
-## for factors
-sources<-c("SR","WK","LG","SL","WB","FG","WT","TL")
-lakes<-c("CL","FL","HL","RL","CC","LL","LP","LO")
-source_cols<-c("#08519c","#3182bd","#6baed6","#bdd7e7",
-               "#fdbe85","#fd8d3c","#e6550d","#a63603")
-source_cols_alt<-c("#08519c","#3182bd","#6baed6","#bdd7e7",
-                   "#006d2c","#31a354","#74c476","#bae4b3")
 
 ## mortalities
 score_cols<-c("FG_score","TL_score","WB_score","WT_score","LG_score","SL_score","SR_score","WK_score")
@@ -120,36 +112,3 @@ ggsave(filename = "03_figures/mortality-fig.tiff",
        device = "tiff",
        width = 1200, height=600, units = "px",
        dpi=300, scale=2.5)
-
-## transplant schedule
-transplant<-read.csv("./02_tidy-data/other-data/transplants.csv") %>% 
-  mutate(LO=LO_B+LO_L) %>% select(-c(LO_B,LO_L)) %>% as_tibble() %>% 
-  mutate(collection_date=dmy(collection_date),
-         processing_date=dmy(processing_date),
-         transplant_date=dmy(transplant_date)) %>% 
-  mutate(processing_time=as.numeric(transplant_date-collection_date),
-         collection_day=as.numeric(collection_date-dmy("30-05-2019")),
-         transplant_day=as.numeric(transplant_date-dmy("30-05-2019")))
-
-## mean collection date and processing time for each lake x source
-transplant_df<-transplant %>%
-  pivot_longer(cols = GL:LO, names_to = "lake", values_to = "value") %>%
-  filter(value > 0, !is.na(collection_date)) %>%
-  group_by(source, lake) %>%
-  summarise(
-    avg_collection_date = mean(collection_day, na.rm = TRUE),
-    avg_transplant_date = mean(transplant_day, na.rm = TRUE),
-    avg_processing_time = mean(processing_time, na.rm = TRUE),
-    .groups = "drop")
-mort_df<-left_join(mort_df,transplant_df)
-
-## modelling mortality rates
-lm(log10(mort_rate+0.01)~source+log10(avg_collection_date)+avg_processing_time,
-   data=mort_df) %>% summary()
-
-
-
-
-
-
-

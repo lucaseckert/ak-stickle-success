@@ -6,6 +6,10 @@ library(ggh4x)
 library(broom)
 library(broom.mixed)
 library(purrr)
+library(flextable)
+library(here)
+library(cowplot)
+library(patchwork)
 
 ## lake factors
 sources<-c("SR","WK","LG","SL","WB","FG","WT","TL")
@@ -70,6 +74,3 @@ save_fig<-function(plot, filename, width, height){
     scale = 2,
     dpi = 300)
 }
-
-
-

@@ -1,5 +1,8 @@
 #### ENVIRONMENTAL DATA CLEANING ####
 
+## Description: Cleans environmental data for computing environmental distances
+## Author: Lucas Eckert (lucas.eckert@mail.mcgill.ca)
+
 ## packages
 library(tidyverse)
 

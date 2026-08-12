@@ -1,213 +1,354 @@
-#### Source Success Models ####
+#### SOURCE SUCCESS MODELS ####
 
 ## Description: exploring source population success from ancestry data
 ## Author: Lucas Eckert (lucas.eckert@mail.mcgill.ca)
 
 ## packages 
-library(tidyverse)
+source(here::here("02_tidy-data/constants.R"))
+library(here)
 library(lme4)
 library(lmerTest)
-library(effectsize)
-library(emmeans)
-library(purrr)
-library(cowplot)
-library(flextable)
+library(glmmTMB)
+library(performance) 
 
-## importing data
+## ancestry data
+count_data<-read.csv(here("02_tidy-data","source-success-counts.csv"))
+
+## combining with environmental data
 data<-left_join(
-  read.csv("02_tidy-data/success-data.csv"),
-  rename(read.csv("02_tidy-data/env-dists.csv"),
-         lake=recipient_lake, source=source_lake))
+  count_data,
+  select(read.csv(here("02_tidy-data","env-dists-new.csv")),
+         lake=recipient_lake, source=source_lake, dist_1, dist_2, dist_3=dist_4)) %>% 
+  ## adjusting zero proportions
+  mutate(across(starts_with("prop_"), ~ ifelse(.x == 0, .x + 0.01, .x), .names = "{.col}_adj")) %>% 
+  ## adjusting counts for the F1 and F2
+  mutate(count_t1_adj = count_t1*2,
+         count_t2_adj = count_t2*4) %>% 
+  ## computing logratios
+  mutate(logratio_1 = log(prop_t1_adj/prop_t0_adj),
+         logratio_2 = log(prop_t2_adj/prop_t1_adj),
+         logratio_net = log(prop_t2_adj/prop_t0_adj))
 
-## models
-models<-list()
-times<-c("delta_1","delta_2","delta_net")
-dists<-c("rla","calc","both","prey","all")
-for (i in 1:length(times)){
-  time_label<-str_remove(times[[i]],"delta_")
-  for(j in 1:length(dists)){
-    dist_col<-paste0("dist_",j)
-    formula_str <- paste0("delta_norm ~ source + ", dist_col, " + initial_prop_norm + (1 | lake)")
-    model<-lmer(as.formula(formula_str), data=filter(data, time == times[i]))
-    model_label<-paste("model",time_label,dists[j],sep="_")
-    n<-((i-1)*5)+j
-    models[[n]]<-model
-    names(models)[n]<-model_label
-  }
-}
-
-## results
-model_summary_df <- map_df(
-  names(models),
-  function(mname) {
-    model <- models[[mname]]
-    
-    ## standardized coefficients without refitting
-    std_df <- tryCatch(
-      as.data.frame(standardize_parameters(model, method = "basic", ci = 0.95)),
-      error = function(e) {
-        message("Skipping ", mname, ": ", e$message)
-        return(NULL)
-      }
-    )
-    
-    if (is.null(std_df)) return(NULL)
-    
-    ## normalize column names
-    std_df <- std_df %>%
-      rename_with(~str_replace_all(., "\\s+", "_")) %>%
-      rename_with(~str_replace_all(., "\\.", "_"))
-    
-    coef_col <- intersect(names(std_df), c("Std_Coefficient", "Std_Estimate", "Coefficient"))
-    ci_low_col <- intersect(names(std_df), c("CI_low", "CI_Lower", "CI_low_95"))
-    ci_high_col <- intersect(names(std_df), c("CI_high", "CI_Upper", "CI_high_95"))
-    
-    std_df <- std_df %>%
-      rename(
-        Std_Coefficient = all_of(coef_col),
-        CI_low = all_of(ci_low_col),
-        CI_high = all_of(ci_high_col)
-      )
-    
-    ## extract p-values
-    coef_df <- as.data.frame(summary(model)$coefficients)
-    
-    ## merge standardized effects and p-values
-    merged <- std_df %>%
-      select(Parameter, Std_Coefficient, CI_low, CI_high) %>%
-      left_join(
-        coef_df %>%
-          rownames_to_column("Parameter") %>%
-          select(Parameter, Estimate, `Pr(>|t|)`),
-        by = "Parameter"
-      ) %>%
-      mutate(model_name = mname)
-    
-    merged
-  }
+## glm olre models
+data$obs_id <- 1:nrow(data)
+glmm_olre_models<-list(
+  glmm_1_1 = glmmTMB(count_t1_adj ~ 0 + source + scale(dist_1) + offset(log(prop_t0_adj)) + (1|lake) + (1|obs_id), family=poisson, data=data),
+  glmm_1_2 = glmmTMB(count_t1_adj ~ 0 + source + scale(dist_2) + offset(log(prop_t0_adj)) + (1|lake) + (1|obs_id), family=poisson, data=data),
+  glmm_1_3 = glmmTMB(count_t1_adj ~ 0 + source + scale(dist_3) + offset(log(prop_t0_adj)) + (1|lake) + (1|obs_id), family=poisson, data=data),
+  glmm_2_1 = glmmTMB(count_t2_adj ~ 0 + source + scale(dist_1) + offset(log(prop_t1_adj)) + (1|lake) + (1|obs_id), family=poisson, data=data),
+  glmm_2_2 = glmmTMB(count_t2_adj ~ 0 + source + scale(dist_2) + offset(log(prop_t1_adj)) + (1|lake) + (1|obs_id), family=poisson, data=data),
+  glmm_2_3 = glmmTMB(count_t2_adj ~ 0 + source + scale(dist_3) + offset(log(prop_t1_adj)) + (1|lake) + (1|obs_id), family=poisson, data=data),
+  glmm_3_1 = glmmTMB(count_t2_adj ~ 0 + source + scale(dist_1) + offset(log(prop_t0_adj)) + (1|lake) + (1|obs_id), family=poisson, data=data), 
+  glmm_3_2 = glmmTMB(count_t2_adj ~ 0 + source + scale(dist_2) + offset(log(prop_t0_adj)) + (1|lake) + (1|obs_id), family=poisson, data=data),
+  glmm_3_3 = glmmTMB(count_t2_adj ~ 0 + source + scale(dist_3) + offset(log(prop_t0_adj)) + (1|lake) + (1|obs_id), family=poisson, data=data)
 )
 
+#### DIAGNOSTICS ####
 
-## cleaning up df
-model_summary_full<-model_summary_df %>%
-  mutate(timespan = map_chr(str_split(model_name, "_"), 2),
-         env_dist = map_chr(str_split(model_name, "_"), 3)) %>% 
-  select(model=model_name, timespan, env_dist, parameter=Parameter, estimate=Estimate, estimate_std=Std_Coefficient,
-         ci_low=CI_low, ci_high=CI_high, p_value='Pr(>|t|)') %>% 
-  mutate(parameter = str_replace(parameter, "^dist_[0-9]+$", "dist"))
+## checks
+sapply(glmm_olre_models, function(x) check_convergence(x)) # all converged 
+sapply(glmm_olre_models, function(x) check_singularity(x)) # some singular 
+lapply(glmm_olre_models, VarCorr) # singular models show collapse of lake level random effect
+sapply(glmm_olre_models, function(x) check_zeroinflation(x)) # all good
+sapply(glmm_olre_models, performance::check_overdispersion) # over dispersion fixed
 
-## essential summary
-model_summary<-model_summary_full %>% 
-  filter(parameter %in% c("dist","initial_prop_norm"))
-view(model_summary)
+## composition checks - even singular models show good agreement between predicted and actual counts
+composition_check1 <- imap_dfr(glmm_olre_models[1:3], function(fit, model_name) {
+  data %>%
+    filter(!is.na(count_t1_adj)) %>%
+    mutate(pred = predict(fit, type = "response")) %>%
+    group_by(lake) %>%
+    summarise(
+      pred_total = sum(pred),
+      actual_N   = first(N_t1)*2,
+      diff       = pred_total - actual_N,
+      pct_diff   = 100 * diff / actual_N,
+      .groups    = "drop"
+    ) %>%
+    mutate(model = model_name)
+}) %>%
+  select(model, lake, pred_total, actual_N, diff, pct_diff)
+view(composition_check1) # all within 5%
+
+composition_check2 <- imap_dfr(glmm_olre_models[4:6], function(fit, model_name) {
+  data %>%
+    filter(!is.na(count_t1_adj)) %>%
+    mutate(pred = predict(fit, type = "response")) %>%
+    group_by(lake) %>%
+    summarise(
+      pred_total = sum(pred),
+      actual_N   = first(N_t2)*4,
+      diff       = pred_total - actual_N,
+      pct_diff   = 100 * diff / actual_N,
+      .groups    = "drop"
+    ) %>%
+    mutate(model = model_name)
+}) %>%
+  select(model, lake, pred_total, actual_N, diff, pct_diff)
+view(composition_check2) # all within 2.5%
+
+composition_check3 <- imap_dfr(glmm_olre_models[7:9], function(fit, model_name) {
+  data %>%
+    mutate(pred = predict(fit, type = "response")) %>%
+    group_by(lake) %>%
+    summarise(
+      pred_total = sum(pred),
+      actual_N   = first(N_t2)*4,
+      diff       = pred_total - actual_N,
+      pct_diff   = 100 * diff / actual_N,
+      .groups    = "drop"
+    ) %>%
+    mutate(model = model_name)
+}) %>%
+  select(model, lake, pred_total, actual_N, diff, pct_diff)
+view(composition_check3) # all within 1%
+
+#### ENV EFFECTS ####
+
+## env dist effects
+dist_effects <- map_dfr(glmm_olre_models, function(mod){
+  coefs <- tidy(mod, effects = "fixed")
+  coefs %>%
+    filter(str_detect(term, "^scale\\(dist_\\d\\)$")) %>%
+    mutate(
+      conf.low = estimate - 1.96 * std.error,
+      conf.high = estimate + 1.96 * std.error,
+      ci = paste0("(", round(conf.low, 3), ", ", round(conf.high, 3), ")")
+    ) %>%
+    select(estimate, std.error, ci, statistic, p.value)
+}, .id = "model_name") %>% 
+  mutate(
+    timespan = case_when(
+      str_detect(model_name, "1_") ~ "1",
+      str_detect(model_name, "2_") ~ "2",
+      str_detect(model_name, "3_") ~ "net"
+    ),
+    env_dist = substr(model_name,8,8)
+  ) %>% 
+  select(model_name, timespan, env_dist, everything()) %>% 
+  group_by(timespan) %>%
+  mutate(p_adj = p.adjust(p.value, method = "BH")) %>% 
+  ungroup()
 
 ## export
-model_summary %>% mutate(across(where(is.numeric), ~ round(., 4))) %>% 
-  select(-estimate) %>% 
-  pivot_wider(names_from = parameter, values_from = c(estimate_std, ci_high, ci_low, p_value)) %>% 
-  mutate(b_env=paste0(estimate_std_dist," (",ci_low_dist," \u2013 ",ci_high_dist,")"),
-         b_freq=paste0(estimate_std_initial_prop_norm," (",ci_low_initial_prop_norm," \u2013 ",ci_high_initial_prop_norm,")")) %>% 
-  select(time=timespan,
-         env=env_dist,
-         b_env,
-         p_env=p_value_dist,
-         b_freq,
-         p_freq=p_value_initial_prop_norm) %>%
+dist_effects %>%
+  mutate(p.value = if_else(p.value < 0.001, "<0.001", as.character(round(p.value,3))),
+         p_adj = if_else(p_adj < 0.001, "<0.001", as.character(round(p_adj,3)))) %>%
+  mutate(across(c(estimate, std.error, statistic), round, 3)) %>%
   flextable() %>% 
-  save_as_docx(path="03_figures/tables/model-table.docx")
+  save_as_docx(path="03_figures/tables/env-effects.docx")
 
-## source summary
-emmeans_summary_df <- map_df(
-  names(models),
-  function(mname) {
-    model <- models[[mname]]
-    
-    ## emmeans for source levels
-    em <- emmeans(model, ~ source)
-    
-    ## df
-    em_df <- as.data.frame(em) %>%
-      rename(
-        source_level = source,
-        estimate = emmean,
-        se = SE,
-        df = df,
-        ci_lower = lower.CL,
-        ci_upper = upper.CL
-      ) %>%
-      mutate(model_name = mname)
-    em_df
-  })
+#### DIAGNOSTICS SUMMARY ####
 
-source_summary<-emmeans_summary_df %>%
-  mutate(timespan = map_chr(str_split(model_name, "_"), 2),
-         env_dist = map_chr(str_split(model_name, "_"), 3)) %>% 
-  select(model_name, timespan, env_dist, source_level, estimate, se, df, ci_lower, ci_upper)
-view(source_summary)
-
-## net means
-source_means_net<-source_summary %>% filter(timespan=="net") %>% 
-  group_by(source_level) %>% 
-  summarize(mean_effect_net=mean(estimate))
-source_means<-source_summary %>% filter(timespan=="1") %>% 
-  group_by(source_level) %>% 
-  summarize(mean_effect_1=mean(estimate)) %>% 
-  left_join(source_means_net)
-
-## saving
-write.csv(source_means, file="02_tidy-data/source-effect-means.csv",
-          quote = F, row.names = F)
-
-## source p values
-source_effects <- map_df(names(models), function(mname) {
-  model <- models[[mname]]
-  a <- anova(model, type = 3)
+## model diag df
+model_diagnostics <- imap_dfr(glmm_olre_models, function(mod, name) {
   
-  # Extract the row for 'source'
-  source_row <- as.data.frame(a["source", ]) %>%
-    mutate(model_name = mname) %>%
-    select(model_name, everything())
-  source_row
+  # singularity
+  singular <- performance::check_singularity(mod)
+  
+  # R2
+  if (!singular) {
+    r2 <- performance::r2(mod)
+    r2_marginal <- r2$R2_marginal
+    r2_conditional <- r2$R2_conditional
+  } else {
+    r2_marginal <- NA_real_
+    r2_conditional <- NA_real_
+  }
+  
+  # overdispersion
+  od <- performance::check_overdispersion(mod)
+  
+  # predicted vs actual counts
+  constant <- if (str_detect(name, "1_")) 2 else 4
+  pred_data <- if (str_detect(name, "3_")) {
+    data
+  } else {
+    filter(data, !is.na(count_t1_adj))
+  }
+  mean_pct_diff <- pred_data %>%
+    mutate(pred = predict(mod, type = "response")) %>%
+    group_by(lake) %>%
+    summarise(
+      pred_total = sum(pred),
+      actual_N   = first(N_t2) * constant,
+      pct_diff   = 100 * (pred_total - actual_N) / actual_N,
+      .groups = "drop"
+    ) %>%
+    summarise(mean_pct_diff = mean(pct_diff)) %>%
+    pull(mean_pct_diff)
+  
+  tibble(
+    model_name = name,
+    AIC = AIC(mod),
+    #BIC = BIC(mod),
+    logLik = as.numeric(logLik(mod)),
+    singular = singular,
+    R2_marginal = r2_marginal,
+    R2_conditional = r2_conditional,
+    dispersion_ratio = od$dispersion_ratio,
+    mean_pct_diff = mean_pct_diff
+  )
+}) %>% mutate(timespan=case_when(
+  str_detect(model_name, "1_") ~ "1",
+  str_detect(model_name, "2_") ~ "2",
+  str_detect(model_name, "3_") ~ "net"),
+  env_dist = substr(model_name,8,8)) %>% 
+  select(model_name, timespan, env_dist, everything())
+view(model_diagnostics)
+
+## export
+model_diagnostics %>%
+  mutate(across(c(AIC, logLik, R2_marginal, R2_conditional, dispersion_ratio, mean_pct_diff), round, 2)) %>%
+  flextable() %>% 
+  save_as_docx(path="03_figures/tables/diagnostics.docx")
+
+#### SOURCE EFFECTS ####
+
+## LRTs for source effect
+source_LRT <- lapply(glmm_olre_models, function(mod) {
+  full <- update(mod, . ~ . - 0 + 1)  # explicitly remove 0, add intercept
+  null <- update(full, . ~ . - source) # remove source, keep intercept
+  anova(null, full, test = "LRT")
 })
 
-row.names(source_effects)<-NULL
-source_effects %>% 
-  mutate(across(where(is.numeric), ~ round(., 4))) %>% 
+lrt_df <- imap_dfr(source_LRT, function(lrt, model_name) {
+  tibble(
+    model   = model_name,
+    logLik_null = lrt$logLik[1],
+    logLik_full = lrt$logLik[2],
+    chi_sq  = lrt$Chisq[2],
+    df      = lrt$Df[2] - lrt$Df[1],
+    p_value = lrt$`Pr(>Chisq)`[2]
+  )
+})
+
+## export
+lrt_df %>% 
+  mutate(timespan=case_when(
+    str_detect(model, "1_") ~ "1",
+    str_detect(model, "2_") ~ "2",
+    str_detect(model, "3_") ~ "net"),
+    env_dist = substr(model,8,8)) %>% 
+  group_by(timespan) %>%
+  mutate(p_adj = p.adjust(p_value, method = "BH"),
+         logLik_null = round(logLik_null,1),
+         logLik_full = round(logLik_full,1),
+         chi_sq = round(chi_sq, 2)) %>% 
+  ungroup() %>% 
+  select(model, timespan, env_dist, everything()) %>% 
+  mutate(p_value = if_else(p_value < 0.001, "<0.001", as.character(round(p_value,3))),
+         p_adj = if_else(p_adj < 0.001, "<0.001", as.character(round(p_adj,3)))) %>% 
   flextable() %>% 
-  save_as_docx(path="03_figures/tables/source-effects-table.docx")
+  save_as_docx(path="03_figures/tables/source-lrt.docx")
+
+#### EFFECT SIZE COMPARISON ####
+
+## get source effects
+source_effects<-emmeans::emmeans(glmm_olre_models$glmm_3_3, ~source, type="response") %>% 
+  as.data.frame()
+max_source_effect<-max(source_effects$rate)/min(source_effects$rate)
+mid_source_effect<-max(source_effects$rate)/median(source_effects$rate)
+
+## get dist effects
+dist_range <- diff(range(data$dist_3))
+dist_sd <- sd(data$dist_3)
+range_in_sd <- dist_range / dist_sd
+beta_dist <- fixef(glmm_olre_models$glmm_3_3)$cond["scale(dist_3)"]
+max_dist_effect<-1/exp(beta_dist * range_in_sd)
+
+#### SOURCE EFFECT EXPORT ####
+
+all_source_effects <- map_dfr(glmm_olre_models, function(mod){
+  emmeans::emmeans(mod, ~source, type = "response") %>% 
+    as.data.frame()
+}, .id = "model_name") %>% 
+  mutate(
+    timespan = case_when(
+      str_detect(model_name, "1_") ~ "1",
+      str_detect(model_name, "2_") ~ "2",
+      str_detect(model_name, "3_") ~ "net"
+    ),
+    env_dist = substr(model_name,8,8)
+  ) %>% 
+  mutate(
+    conf.low = rate - 1.96 * SE,
+    conf.high = rate + 1.96 * SE,
+    ci = paste0("(", round(conf.low, 3), ", ", round(conf.high, 3), ")")
+  ) %>% 
+  select(model_name, timespan, env_dist, everything()) %>% 
+  group_by(model_name) %>% 
+  mutate(
+    rate_sum = sum(rate),
+    rate_prop = rate / rate_sum
+  ) %>% 
+  ungroup()
+
+## export
+all_source_effects %>% 
+  select(model_name, timespan, env_dist, source, rate, SE, ci, rate_prop) %>%
+  arrange(timespan, source, env_dist) %>%
+  mutate(across(c(rate, SE, rate_prop), round, 3)) %>%
+  flextable() %>% 
+  save_as_docx(path="03_figures/tables/source-emmeans.docx")
+
+mean_source_effects<-all_source_effects %>% 
+  filter(timespan != "2") %>% 
+  group_by(timespan, source) %>% 
+  summarize(mean_rate=mean(rate_prop), .groups="drop")
+
+## save
+write.csv(mean_source_effects, "02_tidy-data/mean-source-effects.csv", row.names = FALSE, quote = FALSE)
 
 
-source_order<-arrange(source_means, mean_effect_net)$source_level
-source_summary <- source_summary %>%
-  mutate(source_level = factor(source_level, levels = source_order))
-source_means <- source_means %>%
-  mutate(source_level = factor(source_level, levels = source_order))
+#### WITHOUT OLRE ####
 
-source_cols_alt_named <- setNames(source_cols_alt, sources)
-source_cols_alt_order <- source_cols_alt_named[as.character(source_order)]
+## glmms without olre
+glmm_no_olre<-list(
+  glmm_1_1 = glmmTMB(count_t1_adj ~ 0 + source + scale(dist_1) + offset(log(prop_t0_adj)) + (1|lake), family=poisson, data=data),
+  glmm_1_2 = glmmTMB(count_t1_adj ~ 0 + source + scale(dist_2) + offset(log(prop_t0_adj)) + (1|lake), family=poisson, data=data),
+  glmm_1_3 = glmmTMB(count_t1_adj ~ 0 + source + scale(dist_3) + offset(log(prop_t0_adj)) + (1|lake), family=poisson, data=data),
+  glmm_2_1 = glmmTMB(count_t2_adj ~ 0 + source + scale(dist_1) + offset(log(prop_t1_adj)) + (1|lake), family=poisson, data=data),
+  glmm_2_2 = glmmTMB(count_t2_adj ~ 0 + source + scale(dist_2) + offset(log(prop_t1_adj)) + (1|lake), family=poisson, data=data),
+  glmm_2_3 = glmmTMB(count_t2_adj ~ 0 + source + scale(dist_3) + offset(log(prop_t1_adj)) + (1|lake), family=poisson, data=data),
+  glmm_3_1 = glmmTMB(count_t2_adj ~ 0 + source + scale(dist_1) + offset(log(prop_t0_adj)) + (1|lake), family=poisson, data=data), 
+  glmm_3_2 = glmmTMB(count_t2_adj ~ 0 + source + scale(dist_2) + offset(log(prop_t0_adj)) + (1|lake), family=poisson, data=data),
+  glmm_3_3 = glmmTMB(count_t2_adj ~ 0 + source + scale(dist_3) + offset(log(prop_t0_adj)) + (1|lake), family=poisson, data=data)
+)
 
-source_effect_plot<-source_summary %>% filter(timespan=="net") %>% 
-ggplot(aes(x=source_level, y=estimate, fill=source_level))+
-  geom_point(shape=21, size=4, alpha=0.75)+
-  geom_point(data = source_means, aes(x=source_level, fill=source_level, y=mean_effect_net),
-             size=8, shape=3)+
-  scale_fill_manual(values=source_cols_alt_order)+
-  labs(x="Source Population", y="Effect Size")+
-  annotate("text", label="A", x=1.15, y=0.22, size=12)+
-  theme_bw()+
-  theme(panel.grid.minor = element_blank(),
-        legend.position = "none",
-        axis.title = element_text(size = 16),
-        axis.text.x = element_text(size=14),
-        axis.text.y = element_text(size=14))
+## disperson ratio
+sapply(glmm_no_olre, function(x) performance::check_overdispersion(x))
 
-freq_dep_plot<-readRDS("03_figures/figure-parts/freq-dep-plot.RDS")
+## env effects
+dist_effects_no_olre <- map_dfr(glmm_no_olre, function(mod){
+  coefs <- tidy(mod, effects = "fixed")
+  coefs %>%
+    filter(str_detect(term, "^scale\\(dist_\\d\\)$")) %>%
+    mutate(
+      conf.low = estimate - 1.96 * std.error,
+      conf.high = estimate + 1.96 * std.error,
+      ci = paste0("(", round(conf.low, 3), ", ", round(conf.high, 3), ")")
+    ) %>%
+    select(estimate, std.error, ci, statistic, p.value)
+}, .id = "model_name") %>% 
+  mutate(
+    timespan = case_when(
+      str_detect(model_name, "1_") ~ "1",
+      str_detect(model_name, "2_") ~ "2",
+      str_detect(model_name, "3_") ~ "net"
+    ),
+    env_dist = substr(model_name,8,8)
+  ) %>% 
+  select(model_name, timespan, env_dist, everything()) %>% 
+  group_by(timespan) %>%
+  mutate(p_adj = p.adjust(p.value, method = "BH")) %>% 
+  ungroup()
 
-## saving
-fig<- plot_grid(source_effect_plot,freq_dep_plot, ncol = 2)
-ggsave(fig, filename = "03_figures/model-effects-fig.tiff",
-       device = "tiff",
-       width = 1440, height=600, units = "px",
-       dpi=300, scale=2.5)
+## export
+dist_effects_no_olre %>%
+  select(model_name, timespan, env_dist, estimate, std.error, p.value) %>% 
+  mutate(across(c(estimate, std.error, p.value), round, 3)) %>%
+  flextable() %>% 
+  save_as_docx(path="03_figures/tables/env-effects-no-olre.docx")
 
 

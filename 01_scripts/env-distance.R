@@ -1,12 +1,15 @@
 #### ENVIRONMENTAL DISTANCE ####
 
+## Description: Computing multiple metrics of environmental distance between source and recipient lakes
+## Author: Lucas Eckert (lucas.eckert@mail.mcgill.ca)
+
 ## packages
 library(tidyverse)
 
 ## data
 env<-read.csv("02_tidy-data/env-data.csv")
 
-## once I update things
+## variable lists
 var1<-c("rla","calc")
 var2<-c("rla","calc","macro_total_pre","zoo_total_pre")
 var3<-c("rla","calc","macro_total_post","zoo_total_post")

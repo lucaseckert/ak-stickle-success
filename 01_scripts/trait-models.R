@@ -4,19 +4,13 @@
 ## Author: Lucas Eckert (lucas.eckert@mail.mcgill.ca)
 
 ## packages
-library(tidyverse)
-library(purrr)
-
-## for factors
-sources<-c("LG","SR","WK","SL","WT","WB","FG","TL")
-lakes<-c("CL","FL","HL","RL","CC","LL","LP","LO")
-source_cols_alt<-c("#08519c","#3182bd","#6baed6","#bdd7e7",
-                   "#006d2c","#31a354","#74c476","#bae4b3")
+source(here::here("02_tidy-data/constants.R"))
 
 #### data import ####
 
 ## success data
-success<-read.csv("02_tidy-data/source-effect-means-new.csv")
+success<-read.csv("02_tidy-data/mean-source-effects.csv") %>% 
+  pivot_wider(names_from = timespan, values_from = mean_rate, names_prefix = "mean_effect_")
 
 ## genetic diversity
 diversity<-read.csv("02_tidy-data/other-data/ak_diversity.csv") %>%
@@ -83,9 +77,9 @@ data<-success %>%
 
 #### graphs #####
 graph_data<-data %>% pivot_longer(cols = c(mean_effect_1, mean_effect_net),
-                      names_to = "timespan",
-                      names_prefix = "mean_effect_",
-                      values_to = "response_value") %>% 
+                                  names_to = "timespan",
+                                  names_prefix = "mean_effect_",
+                                  values_to = "response_value") %>% 
   pivot_longer(cols = c(theta_pi,mortality_rate,median_body_size,parasite_rate_sqrt),
                names_to = "predictor_var",
                values_to = "predictor_value")
@@ -93,8 +87,9 @@ graph_data<-data %>% pivot_longer(cols = c(mean_effect_1, mean_effect_net),
 predictor_labels <- c(
   "median_body_size" = "Median Body Size (mm)",
   "mortality_rate" = "Mortality Rate",
-  "parasite_rate_sqrt" = "Parasite Prevelance (sqrt)",
-  "theta_pi" = "Genetic Diversity (pi)")
+  "parasite_rate_sqrt" = "Parasite Prevalence (√)",
+  "theta_pi" = "Genetic Diversity (π)"
+)
 
 timespan_labels <- c(
   "1" = "Year 1 Change",
@@ -107,14 +102,14 @@ graph_data %>%
   ggplot(aes(x=predictor_value,y=response_value, color=source))+
   geom_smooth(aes(group = 1), method = "lm", color = "grey", linetype="dashed", se = FALSE) +
   geom_point(aes(shape=source), size=7)+
-  scale_shape_manual(values = shape_vals)+
-  scale_color_manual(values = source_cols_alt)+
+  scale_shape_manual(values = shape_vals, labels = paste0("S-",sources))+
+  scale_color_manual(values = source_cols_alt, labels = paste0("S-",sources))+
   facet_grid(rows = vars(timespan), cols = vars(predictor_var), scales = "free",
              labeller = labeller(
                timespan = timespan_labels,
                predictor_var = predictor_labels
              )) +
-  labs(y="Mean Source Effect Size", color="Source\nPopulation", shape="Source\nPopulation")+
+  labs(y="Mean Expected Contribution", color="Source\nPopulation", shape="Source\nPopulation")+
   theme_bw()+
   theme(panel.grid.minor = element_blank(),
         legend.position = "right",
@@ -131,6 +126,36 @@ ggsave(filename = "03_figures/trait-success-new.tiff",
        width = 1440, height=800, units = "px",
        dpi=300, scale=3)
 
+graph_data %>%
+  filter(timespan == "1") %>% 
+  mutate(source=factor(source, levels=sources)) %>%
+  ggplot(aes(x=predictor_value,y=response_value, color=source))+
+  geom_smooth(aes(group = 1), method = "lm", color = "grey", linetype="dashed", se = FALSE) +
+  geom_point(aes(shape=source), size=7)+
+  scale_shape_manual(values = shape_vals, labels = paste0("S-",sources))+
+  scale_color_manual(values = source_cols_alt, labels = paste0("S-",sources))+
+  facet_grid(cols = vars(predictor_var), scales = "free",
+             labeller = labeller(
+               #timespan = timespan_labels,
+               predictor_var = predictor_labels
+             )) +
+  labs(y="Mean Expected Contribution", color="Source\nPopulation", shape="Source\nPopulation")+
+  theme_bw()+
+  theme(panel.grid.minor = element_blank(),
+        legend.position = "right",
+        axis.title = element_text(size = 18),
+        axis.title.x = element_blank(),
+        axis.text = element_text(size=14),
+        strip.text = element_text(size=16, face="bold"),
+        strip.background = element_rect(fill = "grey95"),
+        legend.text = element_text(size=16),
+        legend.title = element_text(size = 18, hjust=0.5, face="bold"))
+
+ggsave(filename = "03_figures/trait-success-1.tiff",
+       device = "tiff",
+       width = 1440, height=400, units = "px",
+       dpi=300, scale=3)
+
 #### models ####
 combs<-expand.grid(
   timespan = unique(graph_data$timespan),
@@ -141,8 +166,7 @@ for (i in 1:nrow(combs)){
   time=combs$timespan[i]
   predictor<-combs$predictor_var[[i]]
   response <- paste0("mean_effect_", as.character(time))
-  
-  formula_str <- paste0("scale(", response, ") ~ scale(", predictor, ")")
+  formula_str <- paste0("scale(",response, ") ~ scale(", predictor, ")")
   
   lm<-lm(formula = formula_str, data=data) %>% summary()
   models[[i]]<-lm
@@ -162,7 +186,7 @@ summary_table <- map_df(models, ~{
   group_by(time) %>%
   mutate(adj_p_value=p.adjust(p_value, method = "BH")) %>%
   ungroup()
-  
+
 ## export
 summary_table %>% 
   select(time, formula, effect, r2, adj_r2, p_value, adj_p_value) %>% 
@@ -171,5 +195,5 @@ summary_table %>%
   flextable::flextable() %>% 
   flextable::save_as_docx(path="03_figures/tables/trait-lm-results.docx")
 
-
+## combined model
 lm(scale(mean_effect_1) ~ scale(mortality_rate) + scale(theta_pi), data=data) %>% summary()
