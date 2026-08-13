@@ -119,24 +119,32 @@ g_props<-filter(props, lake=="GL", time %in% c("prop_actual_stocked","prop_0.5")
 saveRDS(g_props, file = "02_tidy-data/g-props.RDS")
 
 ## props fig
-shape_vals<-rep(c(18,20),4)
+shape_vals<-rep(c(21,22,23,24),2)
 props_plot <- props %>%
   filter(time_numeric%in%c(2,3,4), !is.na(prop)) %>%
   mutate(lake = factor(lake, levels = c(benthic_lakes, both_lakes, limnetic_lakes)))
+
 props_fig<-ggplot(props_plot, aes(x=time_numeric,y=prop,color=source))+
   geom_line(linewidth=1.25, alpha=0.7)+
-  geom_point(aes(shape = source), size=4.5)+
+  geom_point(aes(shape = source, fill = source), size=4)+
   scale_shape_manual(values = shape_vals)+
   scale_x_continuous(
     breaks = c(2,3,4),
     labels = c("0", "1", "2"))+
   scale_color_manual(values=source_cols_alt)+
+  scale_fill_manual(values=source_cols_alt)+
   theme_bw()+
   labs(x="Year", y="Proportion", color="Source\nPopulation", shape="Source\nPopulation")+
-  guides(color = guide_legend(
-    override.aes = list(
-      linetype = 0,
-      linewidth = 0)))+
+  guides(
+    color = guide_legend(
+      override.aes = list(
+        shape = shape_vals,
+        fill = source_cols_alt,
+        linetype = 0,
+        linewidth = 0,
+        alpha = 1)),
+    shape = "none",
+    fill = "none") +
   facet_wrap(~lake, nrow=2, dir="lb")+
   theme(panel.grid.minor = element_blank(),
         legend.position = "inside",
@@ -207,19 +215,26 @@ design1 <- "
 deltas_fig<- ggplot(deltas_plot, aes(x = time, y = delta_scaled, color = source))+
   geom_hline(yintercept = 0, linetype="dashed", color="grey", linewidth=0.75)+
   geom_line(linewidth=1.25, alpha=0.7)+
-  geom_point(aes(shape = source), size=4.5)+
+  geom_point(aes(shape = source, fill = source), size=4)+
   scale_shape_manual(values = shape_vals,labels=paste0("S-",sources))+
   scale_x_continuous(
     breaks = c(0, 1, 2),
     labels = c("0", "1", "2"),
     expand = expansion(mult = c(0.1, 0.1)))+
   scale_color_manual(values=source_cols_alt, labels=paste0("S-",sources))+
+  scale_fill_manual(values=source_cols_alt, labels=paste0("S-",sources))+
   theme_bw()+
   labs(x="Year", y=expression(Delta~"Proportion"), color="Source\nPopulation", shape="Source\nPopulation")+
-  guides(color = guide_legend(
-    override.aes = list(
-      linetype = 0,
-      linewidth = 0)))+
+  guides(
+    color = guide_legend(
+      override.aes = list(
+        shape = shape_vals,
+        fill = source_cols_alt,
+        linetype = 0,
+        linewidth = 0,
+        alpha = 1)),
+    shape = "none",
+    fill = "none") +
   ggtitle("Recipient Lake")+
   facet_manual(
     ~factor(lake, labels = paste0("R-", c(limnetic_lakes, benthic_lakes, both_lakes))),
@@ -259,8 +274,9 @@ source_fig<-deltas_plot %>%
   ggplot(aes(x = time, y = delta_scaled, group = lake, color=source))+
   geom_hline(yintercept = 0, linetype="dashed", color="grey", linewidth=0.75)+
   geom_line(linewidth=1.25, alpha=0.7)+
-  geom_point(aes(shape=source), size=4.5)+
+  geom_point(aes(shape=source, fill=source), size=4)+
   scale_shape_manual(values = shape_vals,labels=paste0("S-",sources))+
+  scale_fill_manual(values=source_cols_alt, labels=paste0("S-",sources))+
   scale_x_continuous(
     breaks = c(0, 1, 2),
     labels = c("0", "1", "2"),
@@ -268,10 +284,16 @@ source_fig<-deltas_plot %>%
   scale_color_manual(values=source_cols_alt)+
   theme_bw()+
   labs(x="Year", y=expression(Delta~"Proportion"), color="Source\nPopulation", shape="Source\nPopulation")+
-  guides(color = guide_legend(
-    override.aes = list(
-      linetype = 0,
-      linewidth = 0)))+
+  guides(
+    color = guide_legend(
+      override.aes = list(
+        shape = shape_vals,
+        fill = source_cols_alt,
+        linetype = 0,
+        linewidth = 0,
+        alpha = 1)),
+    shape = "none",
+    fill = "none") +
   ggtitle("Source Population")+
   facet_manual(
     ~factor(source, labels = paste0("S-", sources)),
@@ -307,17 +329,24 @@ loon<-filter(deltas, lake=="LO", time<4, time>0) %>%
 
 loon_plot<-ggplot(loon, aes(x=time, y=delta, color=source))+
   geom_line(aes(color=source), alpha=0.75, linewidth =1.5)+
-  geom_point(aes(shape = source), size=6)+
+  geom_point(aes(shape = source, fill=source), size=5.5)+
   scale_shape_manual(values = shape_vals, labels = paste0("S-",sources))+
+  scale_fill_manual(values=source_cols_alt, labels = paste0("S-",sources))+
   geom_smooth(method="lm", color="grey50", se=F, linewidth=1, linetype="dashed")+
   scale_color_manual(values=source_cols_alt, labels = paste0("S-",sources))+
   scale_x_continuous(breaks=c(1,2,3),
                      labels = c("Year 1","Year 2","Year 3"))+
   labs(x="Year", y=expression("Abs."~Delta~"Proportion"), color="Source\nPopulation", shape="Source\nPopulation")+
-  guides(color = guide_legend(
-    override.aes = list(
-      linetype = 0,
-      linewidth = 0)))+
+  guides(
+    color = guide_legend(
+      override.aes = list(
+        shape = shape_vals,
+        fill = source_cols_alt,
+        linetype = 0,
+        linewidth = 0,
+        alpha = 1)),
+    shape = "none",
+    fill = "none") +
   annotate("text", label="B", x=2.9, y=0.235, size=10)+
   theme_bw()+
   theme(panel.grid.minor = element_blank(),
@@ -347,18 +376,21 @@ g_deltas<-deltas %>% filter(lake=="GL") %>%
   bind_rows(select(g_props,lake,source,delta,time)) %>% 
   bind_rows(
     data.frame(lake="GL", source=g_props$source, time=0, delta=0)
-  ) %>% mutate(seg = ifelse(time <= 0.5, "before", "after"))
+  ) %>% mutate(seg = ifelse(time <= 0.5, "before", "after")) %>% 
+  mutate(source = factor(source, levels=sources),
+         lake = factor(lake, levels = lakes))
 
 
-source_cols_g<-c("#3182bd","#6baed6","#bdd7e7",
-                 "#006d2c","#31a354","#74c476","#bae4b3")
+source_cols_g<-source_cols_alt[-1]
+shape_vals_g<-shape_vals[-1]
 
 g_plot<-ggplot(g_deltas, aes(x=time, y=delta, color=source))+
   geom_vline(xintercept = 0.5, color="grey", linetype="dashed", linewidth=1)+
   geom_line(aes(color=source), alpha=0.75, linewidth =1.5)+
-  geom_point(aes(shape = source), size=6)+
+  geom_point(aes(shape = source, fill=source), size=5.5)+
   scale_shape_manual(values = shape_vals[-1])+
-  scale_color_manual(values=source_cols_alt[-1])+
+  scale_color_manual(values=source_cols_g)+
+  scale_fill_manual(values=source_cols_g)+
   scale_x_continuous(breaks = c(0.5,2), labels = c("1 month","2 years"))+
   labs(x="", y=expression(Delta~"Proportion"))+
   annotate("text", label="A", x=0.1, y=0.135, size=10)+

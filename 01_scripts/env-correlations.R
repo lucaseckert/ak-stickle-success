@@ -10,7 +10,8 @@ library(ggrepel)
 
 ## data
 data<-read.csv("02_tidy-data/other-data/morph-ld.csv") %>% 
-  left_join(rename(read.csv("02_tidy-data/env-data.csv"),source=lake))
+  left_join(rename(read.csv("02_tidy-data/env-data.csv"),source=lake)) %>% 
+  mutate(source=factor(source, levels=sources))
 
 ## ggplot the correlation bewtween rla and calc
 ggplot(data, aes(x=rla, y=calc))+
@@ -24,19 +25,28 @@ ggplot(data, aes(x=rla, y=calc))+
         axis.text.x = element_text(size=18),
         axis.text.y = element_text(size=14))
 
-shape_vals<-rep(c(18,20),4)
+shape_vals<-rep(c(21,22,23,24),2)
 
 ## rla
 lm_rla<-lm(ld~rla, data = data)
 rla_anno<-sprintf("adj. r² = %.3f\np = %.3g", summary(lm_rla)$adj.r.squared, summary(lm_rla)$coefficients[2,4])
 rla_plot<-ggplot(data, aes(x=rla, y=ld))+
   geom_smooth(method="lm", color="grey", linetype="dashed", se=F, linewidth=1)+
-  geom_point(aes(color=source, shape=source), size=7)+
+  geom_point(aes(color=source, shape=source, fill=source), size=6)+
   scale_color_manual(values=source_cols_alt)+
+  scale_fill_manual(values=source_cols_alt)+
   scale_shape_manual(values=shape_vals)+
   labs(x="Relative Littoral Area", y="Body Shape LD", color="Source\nPopulation", shape="Source\nPopulation")+
   annotate("text", label=rla_anno, x=0.8, y=0.5, size=6)+
   annotate("text", label="A", x=0.9, y=2, size=12)+
+  guides(
+    color = guide_legend(
+      override.aes = list(
+        shape = shape_vals,
+        fill = source_cols_alt,
+        alpha = 1)),
+    shape = "none",
+    fill = "none") +
   theme_bw()+
   theme(panel.grid.minor = element_blank(),
         legend.position = "none",
@@ -49,12 +59,21 @@ lm_calc<-lm(ld~calc, data = data)
 calc_anno<-sprintf("adj. r² = %.3f\np = %.3g", summary(lm_calc)$adj.r.squared, summary(lm_calc)$coefficients[2,4])
 calc_plot<-ggplot(data, aes(x=calc, y=ld))+
   geom_smooth(method="lm", color="grey", linetype="dashed", se=F, linewidth=1)+
-  geom_point(aes(color=source, shape=source), size=7)+
+  geom_point(aes(color=source, shape=source, fill=source), size=6)+
   scale_color_manual(values=source_cols_alt)+
+  scale_fill_manual(values=source_cols_alt)+
   scale_shape_manual(values=shape_vals)+
   labs(x="Calcium Concentration", y="Body Shape LD", color="Source\nPopulation", shape="Source\nPopulation")+
   annotate("text", label=calc_anno, x=25, y=0.45, size=6)+
   annotate("text", label="B", x=28, y=2.15, size=12)+
+  guides(
+    color = guide_legend(
+      override.aes = list(
+        shape = shape_vals,
+        fill = source_cols_alt,
+        alpha = 1)),
+    shape = "none",
+    fill = "none") +
   theme_bw()+
   theme(panel.grid.minor = element_blank(),
         legend.position = "right",

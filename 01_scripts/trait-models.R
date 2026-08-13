@@ -95,20 +95,29 @@ timespan_labels <- c(
   "1" = "Year 1 Change",
   "net" = "Net Change")
 
-shape_vals<-rep(c(18,20),4)
+shape_vals<-rep(c(21,22,23,24),2)
 
 graph_data %>%
   mutate(source=factor(source, levels=sources)) %>%
   ggplot(aes(x=predictor_value,y=response_value, color=source))+
   geom_smooth(aes(group = 1), method = "lm", color = "grey", linetype="dashed", se = FALSE) +
-  geom_point(aes(shape=source), size=7)+
+  geom_point(aes(shape=source, fill=source), size=6.5)+
   scale_shape_manual(values = shape_vals, labels = paste0("S-",sources))+
   scale_color_manual(values = source_cols_alt, labels = paste0("S-",sources))+
+  scale_fill_manual(values = source_cols_alt, labels = paste0("S-",sources))+
   facet_grid(rows = vars(timespan), cols = vars(predictor_var), scales = "free",
              labeller = labeller(
                timespan = timespan_labels,
                predictor_var = predictor_labels
              )) +
+  guides(
+    color = guide_legend(
+      override.aes = list(
+        shape = shape_vals,
+        fill = source_cols_alt,
+        alpha = 1)),
+    shape = "none",
+    fill = "none") +
   labs(y="Mean Expected Contribution", color="Source\nPopulation", shape="Source\nPopulation")+
   theme_bw()+
   theme(panel.grid.minor = element_blank(),
@@ -131,14 +140,23 @@ graph_data %>%
   mutate(source=factor(source, levels=sources)) %>%
   ggplot(aes(x=predictor_value,y=response_value, color=source))+
   geom_smooth(aes(group = 1), method = "lm", color = "grey", linetype="dashed", se = FALSE) +
-  geom_point(aes(shape=source), size=7)+
+  geom_point(aes(shape=source, fill=source), size=6)+
   scale_shape_manual(values = shape_vals, labels = paste0("S-",sources))+
   scale_color_manual(values = source_cols_alt, labels = paste0("S-",sources))+
+  scale_fill_manual(values = source_cols_alt, labels = paste0("S-",sources))+
   facet_grid(cols = vars(predictor_var), scales = "free",
              labeller = labeller(
                #timespan = timespan_labels,
                predictor_var = predictor_labels
              )) +
+  guides(
+    color = guide_legend(
+      override.aes = list(
+        shape = shape_vals,
+        fill = source_cols_alt,
+        alpha = 1)),
+    shape = "none",
+    fill = "none") +
   labs(y="Mean Expected Contribution", color="Source\nPopulation", shape="Source\nPopulation")+
   theme_bw()+
   theme(panel.grid.minor = element_blank(),
