@@ -347,7 +347,7 @@ loon_plot<-ggplot(loon, aes(x=time, y=delta, color=source))+
         alpha = 1)),
     shape = "none",
     fill = "none") +
-  annotate("text", label="B", x=2.9, y=0.235, size=10)+
+  #annotate("text", label="B", x=2.9, y=0.235, size=10)+
   theme_bw()+
   theme(panel.grid.minor = element_blank(),
         legend.position = "right",
@@ -393,7 +393,7 @@ g_plot<-ggplot(g_deltas, aes(x=time, y=delta, color=source))+
   scale_fill_manual(values=source_cols_g)+
   scale_x_continuous(breaks = c(0.5,2), labels = c("1 month","2 years"))+
   labs(x="", y=expression(Delta~"Proportion"))+
-  annotate("text", label="A", x=0.1, y=0.135, size=10)+
+  #annotate("text", label="A", x=0.1, y=0.135, size=10)+
   theme_bw()+
   theme(panel.grid.minor = element_blank(),
         legend.position = "none",
@@ -413,7 +413,8 @@ chisq<-chisq.test(x=g_props$count, p=g_props$prop_actual_stocked)
 chisq$expected
 g_props$p_value_approx <- 2 * pnorm(-abs(chisq$residuals))
 
-time_fig<- cowplot::plot_grid(g_plot,loon_plot, ncol = 2, rel_widths = c(1,1.3))
+time_fig<- cowplot::plot_grid(g_plot,loon_plot, ncol = 2, rel_widths = c(1,1.3), 
+                              labels = c("A","B"), label_fontface = "bold", label_size = 24)
 ggsave(time_fig, filename = "03_figures/timespans-fig.tiff",
        device = "tiff",
        width = 1440, height=550, units = "px",

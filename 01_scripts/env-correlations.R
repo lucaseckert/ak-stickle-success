@@ -38,7 +38,7 @@ rla_plot<-ggplot(data, aes(x=rla, y=ld))+
   scale_shape_manual(values=shape_vals)+
   labs(x="Relative Littoral Area", y="Body Shape LD", color="Source\nPopulation", shape="Source\nPopulation")+
   annotate("text", label=rla_anno, x=0.8, y=0.5, size=6)+
-  annotate("text", label="A", x=0.9, y=2, size=12)+
+  #annotate("text", label="A", x=0.9, y=2, size=12)+
   guides(
     color = guide_legend(
       override.aes = list(
@@ -65,7 +65,7 @@ calc_plot<-ggplot(data, aes(x=calc, y=ld))+
   scale_shape_manual(values=shape_vals)+
   labs(x="Calcium Concentration", y="Body Shape LD", color="Source\nPopulation", shape="Source\nPopulation")+
   annotate("text", label=calc_anno, x=25, y=0.45, size=6)+
-  annotate("text", label="B", x=28, y=2.15, size=12)+
+  #annotate("text", label="B", x=28, y=2.15, size=12)+
   guides(
     color = guide_legend(
       override.aes = list(
@@ -84,7 +84,8 @@ calc_plot<-ggplot(data, aes(x=calc, y=ld))+
         legend.title = element_text(size = 18, hjust=0.5, face="bold"))
 
 ## saving
-fig<- plot_grid(rla_plot,calc_plot, ncol = 2, rel_widths = c(1,1.3))
+fig<- plot_grid(rla_plot,calc_plot, ncol = 2, rel_widths = c(1,1.3),
+                labels = c("A","B"), label_fontface = "bold", label_size = 24)
 ggsave(fig, filename = "03_figures/env-correlations-fig.tiff",
        device = "tiff",
        width = 1440, height=600, units = "px",
